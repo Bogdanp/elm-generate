@@ -1,4 +1,4 @@
-# elm-generate
+# elm-generate [![Build Status](https://travis-ci.org/Bogdanp/elm-generate.svg?branch=master)](https://travis-ci.org/Bogdanp/elm-generate)
 
 ``` shell
 elm package install Bogdanp/elm-generate
