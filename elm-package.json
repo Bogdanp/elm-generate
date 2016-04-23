@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0",
+    "version": "1.1.0",
     "summary": "Simple list generators in Elm.",
     "repository": "https://github.com/Bogdanp/elm-generate.git",
     "license": "BSD3",
