@@ -137,7 +137,7 @@ next gen =
     (x::xs) ->
       case gen'.transform x of
         Skip ->
-          next <| Generator <| { gen' | items = xs }
+          next <| Generator { gen' | items = xs }
 
         Keep a ->
           (Just a, Generator { items = xs, transform = gen'.transform })
@@ -153,7 +153,7 @@ next gen =
 map : (b -> c) -> Generator a b -> Generator a c
 map f gen =
   let gen' = unwrap gen in
-  Generator <| { gen' | transform = gen'.transform >> mapMutator f }
+  Generator { gen' | transform = gen'.transform >> mapMutator f }
 
 
 {-| Filter the elements of a Generator.
@@ -165,7 +165,7 @@ map f gen =
 filter : (b -> Bool) -> Generator a b -> Generator a b
 filter f gen =
   let gen' = unwrap gen in
-  Generator <| { gen' | transform = gen'.transform >> filterMutator f }
+  Generator { gen' | transform = gen'.transform >> filterMutator f }
 
 
 {-| Remove elements that match the given predicate from the Generator.
@@ -182,7 +182,7 @@ remove f = filter (not << f)
 reverse : Generator a b -> Generator a b
 reverse gen =
   let gen' = unwrap gen in
-  Generator <| { gen' | items = List.reverse gen'.items }
+  Generator { gen' | items = List.reverse gen'.items }
 
 
 {-| Take the first `n` elements from a Generator.
@@ -194,7 +194,7 @@ reverse gen =
 take : Int -> Generator a b -> Generator a b
 take n gen =
   let gen' = unwrap gen in
-  Generator <| { gen' | items = List.take n gen'.items }
+  Generator { gen' | items = List.take n gen'.items }
 
 
 {-| Drop the first `n` elements from a Generator.
@@ -206,4 +206,4 @@ take n gen =
 drop : Int -> Generator a b -> Generator a b
 drop n gen =
   let gen' = unwrap gen in
-  Generator <| { gen' | items = List.drop n gen'.items }
+  Generator { gen' | items = List.drop n gen'.items }
