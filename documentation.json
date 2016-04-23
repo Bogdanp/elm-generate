@@ -1,0 +1,46 @@
+[
+  {
+    "name": "Generate",
+    "comment": " Generate is a library for lazy list transformation.\n\n# Types\n@docs Generator\n\n## Converting to and from lists\n@docs fromList, toList\n\n## Extracting values\n@docs next\n\n## Transforming values\n@docs map, filter\n\n",
+    "aliases": [],
+    "types": [
+      {
+        "name": "Generator",
+        "comment": " Generators are lists whose map and filter operations are applied\nlazily as items are requested.  This means that operations like:\n\n    fromList [1,2,3]\n      |> map ((+) 1)\n      |> filter (\\x -> x % 2 == 0)\n      |> map toString\n      |> toList\n\nOnly iterate through the list once.\n\n",
+        "args": [
+          "a",
+          "b"
+        ],
+        "cases": []
+      }
+    ],
+    "values": [
+      {
+        "name": "filter",
+        "comment": " Filter the elements of a Generator.\n\n    > fromList [1, 2, 3] |> filter (flip (>) 1) |> toList\n    [2,3] : List number\n\n",
+        "type": "(a -> Bool) -> Generate.Generator x a -> Generate.Generator x a"
+      },
+      {
+        "name": "fromList",
+        "comment": " Construct a Generator from a List.\n\n    > fromList [1, 2, 3]\n    Generator { items = [1,2,3], transform = <function> }\n      : Generate.Generator number number\n\n",
+        "type": "List a -> Generate.Generator a a"
+      },
+      {
+        "name": "map",
+        "comment": " Transform the elements of a Generator.\n\n\n    > fromList [1, 2, 3] |> map ((+) 1) |> toList\n    [2,3,4] : List number\n\n",
+        "type": "(a -> b) -> Generate.Generator x a -> Generate.Generator x b"
+      },
+      {
+        "name": "next",
+        "comment": " Get the next element in the generator after transforming it.\n\n    > fromList [1, 2, 3] |> filter ((/=) 1) |> next\n    (Just 2,Generator { items = [3], transform = <function> })\n      : ( Maybe.Maybe number, Generate.Generator number number )\n\n    > fromList [1, 2, 3] |> filter ((==) 5) |> next\n    (Nothing,Generator { items = [], transform = <function> })\n      : ( Maybe.Maybe number, Generate.Generator number number )\n\n",
+        "type": "Generate.Generator a b -> ( Maybe.Maybe b, Generate.Generator a b )"
+      },
+      {
+        "name": "toList",
+        "comment": " Construct a List from a Generator.\n\n    > fromList [1, 2, 3] |> toList\n    [1,2,3] : List number\n\n",
+        "type": "Generate.Generator a b -> List b"
+      }
+    ],
+    "generated-with-elm-version": "0.16.0"
+  }
+]
