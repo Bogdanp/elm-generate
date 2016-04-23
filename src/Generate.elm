@@ -1,6 +1,6 @@
 module Generate ( Generator
-                , fromList, toList, next
-                , map, filter
+                , singleton, fromList, toList, next
+                , map, filter, remove, reverse, take, drop
                 ) where
 
 {-| Generate is a library for lazy list transformation.
@@ -8,14 +8,14 @@ module Generate ( Generator
 # Types
 @docs Generator
 
-## Converting to and from lists
-@docs fromList, toList
+## Converting to and from Generators
+@docs singleton, fromList, toList
 
 ## Extracting values
 @docs next
 
-## Transforming values
-@docs map, filter
+## Transforming Generators
+@docs map, filter, remove, reverse, take, drop
 
 -}
 
@@ -72,6 +72,16 @@ filterMutator f m =
         Skip
 
 
+{-| Construct a Generator from a single value.
+
+    > singleton 1
+    Generator { items = [1], transform = <function> }
+      : Generate.Generator number number
+-}
+singleton : a -> Generator a a
+singleton a = Generator { items = [a], transform = Keep }
+
+
 {-| Construct a Generator from a List.
 
     > fromList [1, 2, 3]
@@ -87,7 +97,7 @@ fromList xs =
 {-| Construct a List from a Generator.
 
     > fromList [1, 2, 3] |> toList
-    [1,2,3] : List number
+    [1, 2, 3] : List number
 
 -}
 toList : Generator a b -> List b
@@ -104,31 +114,6 @@ toList gen =
           toList' gen (x :: acc)
   in
     toList' gen []
-
-
-{-| Transform the elements of a Generator.
-
-
-    > fromList [1, 2, 3] |> map ((+) 1) |> toList
-    [2,3,4] : List number
-
--}
-map : (a -> b) -> Generator x a -> Generator x b
-map f gen =
-  let gen' = unwrap gen in
-  Generator <| { gen' | transform = gen'.transform >> mapMutator f }
-
-
-{-| Filter the elements of a Generator.
-
-    > fromList [1, 2, 3] |> filter (flip (>) 1) |> toList
-    [2,3] : List number
-
--}
-filter : (a -> Bool) -> Generator x a -> Generator x a
-filter f gen =
-  let gen' = unwrap gen in
-  Generator <| { gen' | transform = gen'.transform >> filterMutator f }
 
 
 {-| Get the next element in the generator after transforming it.
@@ -156,3 +141,69 @@ next gen =
 
         Keep a ->
           (Just a, Generator { items = xs, transform = gen'.transform })
+
+
+{-| Transform the elements of a Generator.
+
+
+    > fromList [1, 2, 3] |> map ((+) 1) |> toList
+    [2, 3, 4] : List number
+
+-}
+map : (b -> c) -> Generator a b -> Generator a c
+map f gen =
+  let gen' = unwrap gen in
+  Generator <| { gen' | transform = gen'.transform >> mapMutator f }
+
+
+{-| Filter the elements of a Generator.
+
+    > fromList [1, 2, 3] |> filter (flip (>) 1) |> toList
+    [2, 3] : List number
+
+-}
+filter : (b -> Bool) -> Generator a b -> Generator a b
+filter f gen =
+  let gen' = unwrap gen in
+  Generator <| { gen' | transform = gen'.transform >> filterMutator f }
+
+
+{-| Remove elements that match the given predicate from the Generator.
+
+    > fromList [1, 2, 3] |> remove (\x -> x % 2 == 0) |> toList
+    [1, 3] : List number
+
+-}
+remove : (b -> Bool) -> Generator a b -> Generator a b
+remove f = filter (not << f)
+
+
+{-| Reverse a Generator's elements. -}
+reverse : Generator a b -> Generator a b
+reverse gen =
+  let gen' = unwrap gen in
+  Generator <| { gen' | items = List.reverse gen'.items }
+
+
+{-| Take the first `n` elements from a Generator.
+
+    > fromList [1, 2, 3] |> take 1 |> toList
+    [1] : List number
+
+-}
+take : Int -> Generator a b -> Generator a b
+take n gen =
+  let gen' = unwrap gen in
+  Generator <| { gen' | items = List.take n gen'.items }
+
+
+{-| Drop the first `n` elements from a Generator.
+
+    > fromList [1, 2, 3] |> drop 1 |> toList
+    [2, 3] : List number
+
+-}
+drop : Int -> Generator a b -> Generator a b
+drop n gen =
+  let gen' = unwrap gen in
+  Generator <| { gen' | items = List.drop n gen'.items }
