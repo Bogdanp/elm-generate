@@ -28,7 +28,7 @@ items are requested.  This makes is so that expressions like:
 
     import Generate as G
 
-    G.fromList [1,2,3]
+    G.fromList [1, 2, 3]
       |> G.map ((+) 1)
       |> G.filter (\x -> x % 2 == 0)
       |> G.map toString
