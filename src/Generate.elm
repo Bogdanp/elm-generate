@@ -1,9 +1,10 @@
 module Generate ( Generator
                 , singleton, fromList, toList, next
                 , map, filter, remove, reverse, take, drop
+                , foldl, foldr, any, all, sum, product, length
                 ) where
 
-{-| Generate is a library for lazy list transformation.
+{-| Generate is a library for lazy list manipulation.
 
 # Types
 @docs Generator
@@ -17,19 +18,24 @@ module Generate ( Generator
 ## Transforming Generators
 @docs map, filter, remove, reverse, take, drop
 
+## Producing values
+@docs foldl, foldr, any, all, sum, product, length
 -}
 
 
-{-| Generators are lists whose map and filter operations are applied
-lazily as items are requested.  This means that operations like:
+{-| Generators are lists whose transformations are applied lazily as
+items are requested.  This makes is so that expressions like:
 
-    fromList [1,2,3]
-      |> map ((+) 1)
-      |> filter (\x -> x % 2 == 0)
-      |> map toString
-      |> toList
+    import Generate as G
 
-Only iterate through the list once.
+    G.fromList [1,2,3]
+      |> G.map ((+) 1)
+      |> G.filter (\x -> x % 2 == 0)
+      |> G.map toString
+      |> G.toList
+
+Only end up iterating through the list once while still providing the
+same results as their List module counterparts.
 
 -}
 type Generator a b
@@ -79,7 +85,8 @@ filterMutator f m =
       : Generate.Generator number number
 -}
 singleton : a -> Generator a a
-singleton a = Generator { items = [a], transform = Keep }
+singleton a =
+  Generator { items = [a], transform = Keep }
 
 
 {-| Construct a Generator from a List.
@@ -101,29 +108,18 @@ fromList xs =
 
 -}
 toList : Generator a b -> List b
-toList gen =
-  let
-    gen' = unwrap gen
-
-    toList' gen acc =
-      case next gen of
-        (Nothing, _) ->
-          List.reverse acc
-
-        (Just x, gen) ->
-          toList' gen (x :: acc)
-  in
-    toList' gen []
+toList =
+  List.reverse << foldl (::) []
 
 
 {-| Get the next element in the generator after transforming it.
 
     > fromList [1, 2, 3] |> filter ((/=) 1) |> next
-    (Just 2,Generator { items = [3], transform = <function> })
+    (Just 2, Generator { items = [3], transform = <function> })
       : ( Maybe.Maybe number, Generate.Generator number number )
 
     > fromList [1, 2, 3] |> filter ((==) 5) |> next
-    (Nothing,Generator { items = [], transform = <function> })
+    (Nothing, Generator { items = [], transform = <function> })
       : ( Maybe.Maybe number, Generate.Generator number number )
 
 -}
@@ -190,6 +186,11 @@ reverse gen =
     > fromList [1, 2, 3] |> take 1 |> toList
     [1] : List number
 
+*Note*: This function is applied to the *original* list:
+
+    > fromList [1, 2, 3] |> filter ((/=) 1) |> take 1 |> toList
+    [] : List number
+
 -}
 take : Int -> Generator a b -> Generator a b
 take n gen =
@@ -202,8 +203,132 @@ take n gen =
     > fromList [1, 2, 3] |> drop 1 |> toList
     [2, 3] : List number
 
+*Note*: This function is applied to the *original* list:
+
+    > fromList [1, 2, 3] |> filter ((/=) 1) |> drop 1 |> toList
+    [2, 3] : List number
+
 -}
 drop : Int -> Generator a b -> Generator a b
 drop n gen =
   let gen' = unwrap gen in
   Generator { gen' | items = List.drop n gen'.items }
+
+
+{-| Fold a Generator from the left.
+
+    > fromList [1, 2, 3] |> foldl (::) []
+    [3, 2, 1] : List number
+
+-}
+foldl : (b -> c -> c) -> c -> Generator a b -> c
+foldl f e gen =
+  let
+    go gen acc =
+      case next gen of
+        (Nothing, _) ->
+          acc
+
+        (Just x, gen) ->
+          go gen (f x acc)
+  in
+    go gen e
+
+
+{-| Fold a Generator from the right.
+
+    > fromList [1, 2, 3] |> foldr (::) []
+    [1, 2, 3] : List number
+
+-}
+foldr : (b -> c -> c) -> c -> Generator a b -> c
+foldr f e gen =
+  let
+    go gen =
+      case next gen of
+        (Nothing, _) ->
+          e
+
+        (Just x, gen) ->
+          f x (go gen)
+  in
+    go gen
+
+
+{-| Determine if all of the Generator's elements match the predicate.
+
+    > fromList [2, 4, 6] |> all (\x -> x % 2 == 0)
+    True : Bool
+
+    > fromList [1, 2, 3] |> all (\x -> x % 2 == 0)
+    False : Bool
+
+-}
+all : (a -> Bool) -> Generator x a -> Bool
+all f gen =
+  case next gen of
+    (Nothing, _) ->
+      True
+
+    (Just x, gen) ->
+      if f x then -- The && version of this does not TCO
+        all f gen
+
+      else
+        False
+
+
+{-| Determine if any of the Generator's elements match the predicate.
+
+    > fromList [1, 2, 3] |> any (\x -> x % 2 == 0)
+    True : Bool
+
+    > fromList [1, 3, 5] |> any (\x -> x % 2 == 0)
+    False : Bool
+
+-}
+any : (a -> Bool) -> Generator x a -> Bool
+any f gen =
+  case next gen of
+    (Nothing, _) ->
+      False
+
+    (Just x, gen) ->
+      if f x then -- The || version of this does not TCO
+        True
+
+      else
+        any f gen
+
+
+{-| Compute the product of the Generator's elements.
+
+    > fromList [1, 2, 3] |> sum
+    6 : number
+
+-}
+sum : Generator a number -> number
+sum gen =
+  foldl (+) 0 gen
+
+
+{-| Compute the product of the Generator's elements.
+
+    > fromList [1, 2, 3] |> product
+    6 : number
+
+-}
+product : Generator a number -> number
+product gen =
+  foldl (*) 1 gen
+
+
+{-| Compute the length of a Generator.
+
+    > fromList [1, 2, 3] |> length
+    3 : Int
+
+-}
+length : Generator a b -> Int
+length gen =
+  foldl ((+) << (always 1)) 0 gen
